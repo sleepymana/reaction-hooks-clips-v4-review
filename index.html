@@ -240,6 +240,23 @@ const BRANDS = [
   {key:"v3_golfballs", label:"Golfballs — v3 carry-over"},
 ];
 
+// Decisions from the previous review round - cards pre-load with these
+// so it's obvious which ones were not approved + what was requested.
+// Change a button to update; will mark this round's review.
+const LAST_REVIEW = {
+  "s4_05":           { decision: "regen", note: "regen" },
+  "s4_07":           { decision: "regen", note: "regen" },
+  "g4_01":           { decision: "regen", note: "regen to be laughing the whole time" },
+  "g4_06":           { decision: "edit",  note: "dropped text 10% (text-only fix)" },
+  "g4_14":           { decision: "edit",  note: "dropped text 10% (text-only fix)" },
+  "g4_15":           { decision: "edit",  note: "dropped text 10% (text-only fix)" },
+  "v3_snyder_01":    { decision: "regen", note: "shouldn't be talking - regenned" },
+  "v3_snyder_07":    { decision: "edit",  note: "swapped to Dave hook (text-only fix)" },
+  "v3_golfballs_02": { decision: "regen", note: "dropped text 6% + regenned no talking" },
+  "v3_golfballs_03": { decision: "regen", note: "regenned no talking" },
+  "v3_golfballs_15": { decision: "edit",  note: "swapped to brother-in-law hook + dropped 10%" },
+};
+
 const root = document.getElementById("root");
 const state = {};
 
@@ -255,7 +272,8 @@ for (const b of BRANDS) {
   root.appendChild(grid);
 
   for (const r of list) {
-    state[r.id] = { decision: null, note: "" };
+    const prev = LAST_REVIEW[r.id] || { decision: null, note: "" };
+    state[r.id] = { decision: prev.decision, note: prev.note };
     const card = document.createElement("div");
     card.className = "card";
     card.id = `card_${r.id}`;
@@ -275,7 +293,7 @@ for (const b of BRANDS) {
           <button class="edit"    data-id="${r.id}" data-decision="edit">Edit</button>
           <button class="reject"  data-id="${r.id}" data-decision="reject">Reject</button>
         </div>
-        <textarea class="note" placeholder="Notes" data-id="${r.id}"></textarea>
+        <textarea class="note" placeholder="Notes" data-id="${r.id}">${state[r.id].note}</textarea>
       </div>
     `;
     grid.appendChild(card);
@@ -283,6 +301,11 @@ for (const b of BRANDS) {
 }
 
 const TOTAL = Object.keys(state).length;
+
+// Apply pre-loaded LAST_REVIEW decisions on first render.
+for (const id of Object.keys(state)) {
+  if (state[id].decision) requestAnimationFrame(() => updateUI(id));
+}
 
 function updateUI(id) {
   const card = document.getElementById(`card_${id}`);
