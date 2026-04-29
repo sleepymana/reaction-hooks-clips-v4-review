@@ -14,6 +14,7 @@
     --green: #2bb06a;
     --red: #d94a3d;
     --amber: #d9a73d;
+    --blue: #4a8fd9;
   }
   * { box-sizing: border-box; }
   body {
@@ -60,6 +61,7 @@
   .card.approved { border-color: var(--green); }
   .card.rejected { border-color: var(--red); }
   .card.edit     { border-color: var(--amber); }
+  .card.regen    { border-color: var(--blue); }
   .card .vidwrap {
     aspect-ratio: 9/16; background: #000;
     position: relative; overflow: hidden;
@@ -94,6 +96,7 @@
   .card.approved .badge { color: var(--green); border-color: var(--green); }
   .card.rejected .badge { color: var(--red);   border-color: var(--red); }
   .card.edit     .badge { color: var(--amber); border-color: var(--amber); }
+  .card.regen    .badge { color: var(--blue);  border-color: var(--blue); }
   .meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
   .meta strong { color: var(--text); font-weight: 600; }
   .btn-row { display: flex; gap: 6px; margin: 6px 0; }
@@ -105,6 +108,7 @@
   .btn-row button.approve.active { background: var(--green); border-color: var(--green); color: #fff; }
   .btn-row button.reject.active  { background: var(--red);   border-color: var(--red);   color: #fff; }
   .btn-row button.edit.active    { background: var(--amber); border-color: var(--amber); color: #1a1a1a; }
+  .btn-row button.regen.active   { background: var(--blue);  border-color: var(--blue);  color: #fff; }
   .btn-row button:hover { border-color: var(--text); }
   .note {
     width: 100%; min-height: 50px; resize: vertical;
@@ -156,7 +160,7 @@ const HOOKS = {
   "v3_snyder_01": "Did a blind test with the three I play with every weekend. They all picked these!",
   "v3_snyder_05": "I'm a 12 handicap and I felt the difference on the first shot.",
   "v3_snyder_06": "I'm a 12 handicap and I felt the difference on the first shot.",
-  "v3_snyder_07": "Did a blind test with the three I play with every weekend. They all picked these!",
+  "v3_snyder_07": "Printed 'STILL OUTDRIVING DAVE' on a sleeve. He's so mad 😂",
   "v3_snyder_10": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
   "v3_snyder_11": "I'm a 12 handicap and I felt the difference on the first shot.",
   "v3_snyder_12": "Did a blind test with the three I play with every weekend. They all picked these!",
@@ -171,7 +175,7 @@ const HOOKS = {
   "v3_golfballs_03": "Pulled out a sleeve on the first tee with my name on all the balls and the starter asked if I was a pro!",
   "v3_golfballs_05": "Got my dad balls printed with the date he made his hole-in-one. He was so happy.",
   "v3_golfballs_06": "Got my dad balls printed with the date he made his hole-in-one. He was so happy.",
-  "v3_golfballs_15": "She skipped the gift card. Got me 24 balls printed with 'WORLD'S HOTTEST GOLFER.' I've been showing them off all weekend.",
+  "v3_golfballs_15": "I printed my brother-in-law's face on a dozen balls for his birthday. His reaction was priceless.",
 };
 
 // HEAD_POS — same data used in the v3 review page, plus rough estimates
@@ -187,13 +191,19 @@ const HEAD_POS = {
   // v4 (estimates — selfie framing tends to put head 8-20% from top)
   "s4_01": 18, "s4_02": 12, "s4_04": 14, "s4_05": 16, "s4_06": 18,
   "s4_07": 14, "s4_09": 14, "s4_13": 16, "s4_14": 8,
-  "g4_01": 16, "g4_03": 12, "g4_05": 24, "g4_06": 14, "g4_08": 16,
-  "g4_09": 14, "g4_11": 12, "g4_14": 18, "g4_15": 14,
+  "g4_01": 16, "g4_03": 12, "g4_05": 24, "g4_06": 24, "g4_08": 16,
+  "g4_09": 14, "g4_11": 12, "g4_14": 28, "g4_15": 24,
+};
+// Per-clip extra drop applied on top of HEAD_POS (positive = bubble lower).
+// Used for client-requested fine-tuning per clip.
+const EXTRA_DROP = {
+  "v3_golfballs_02": 6,
+  "v3_golfballs_15": 10,
 };
 
 // Bubble bottom 6% above head top, clamp head min to 22% to keep room from frame top.
 function bubbleBottomPct(id) {
-  const head = Math.max(HEAD_POS[id] ?? 18, 22);
+  const head = Math.max(HEAD_POS[id] ?? 18, 22) + (EXTRA_DROP[id] ?? 0);
   return (106 - head).toFixed(1);
 }
 
@@ -261,6 +271,7 @@ for (const b of BRANDS) {
         </div>
         <div class="btn-row">
           <button class="approve" data-id="${r.id}" data-decision="approve">Approve</button>
+          <button class="regen"   data-id="${r.id}" data-decision="regen">Regen</button>
           <button class="edit"    data-id="${r.id}" data-decision="edit">Edit</button>
           <button class="reject"  data-id="${r.id}" data-decision="reject">Reject</button>
         </div>
@@ -277,10 +288,11 @@ function updateUI(id) {
   const card = document.getElementById(`card_${id}`);
   const badge = document.getElementById(`badge_${id}`);
   const { decision } = state[id];
-  card.classList.remove("approved", "rejected", "edit");
+  card.classList.remove("approved", "rejected", "edit", "regen");
   if (decision === "approve") { card.classList.add("approved"); badge.textContent = "Approved"; }
   else if (decision === "reject") { card.classList.add("rejected"); badge.textContent = "Rejected"; }
   else if (decision === "edit") { card.classList.add("edit"); badge.textContent = "Edit needed"; }
+  else if (decision === "regen") { card.classList.add("regen"); badge.textContent = "Regen"; }
   else { badge.textContent = "Pending"; }
   for (const b of card.querySelectorAll(".btn-row button")) {
     b.classList.toggle("active", b.dataset.decision === decision);
@@ -290,7 +302,7 @@ function updateUI(id) {
 }
 
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest("button.approve, button.reject, button.edit");
+  const btn = e.target.closest("button.approve, button.reject, button.edit, button.regen");
   if (!btn) return;
   const id = btn.dataset.id;
   const d = btn.dataset.decision;
