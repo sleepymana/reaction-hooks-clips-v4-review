@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UGC Reaction Hooks v4 — Clip Review</title>
+<style>
+  :root {
+    --bg: #0e0f12;
+    --panel: #16181d;
+    --line: #25282f;
+    --text: #e8e8ea;
+    --muted: #8b8e97;
+    --green: #2bb06a;
+    --red: #d94a3d;
+    --amber: #d9a73d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; margin: 0; flex: 1; min-width: 200px; }
+  .progress { color: var(--muted); font-variant-numeric: tabular-nums; }
+  button.primary {
+    background: var(--text); color: var(--bg); border: 0;
+    padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;
+  }
+  button.primary:hover { opacity: 0.9; }
+  .brand-section {
+    padding: 40px 20px 16px;
+    font-size: 32px; font-weight: 800;
+    letter-spacing: -0.01em; color: var(--text);
+    border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+  }
+  .brand-section:first-of-type { border-top: 0; padding-top: 24px; }
+  @media (max-width: 600px) {
+    .brand-section { font-size: 24px; padding: 28px 16px 12px; }
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; padding: 0 20px 20px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .card.approved { border-color: var(--green); }
+  .card.rejected { border-color: var(--red); }
+  .card.edit     { border-color: var(--amber); }
+  .card .vidwrap {
+    aspect-ratio: 9/16; background: #000;
+    position: relative; overflow: hidden;
+  }
+  .card video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+  .text-overlay {
+    position: absolute;
+    left: 8%; right: 8%;
+    text-align: center; pointer-events: none;
+  }
+  .text-overlay span {
+    display: inline;
+    background: #ffffff; color: #000000;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    font-weight: 700;
+    font-size: 13px; line-height: 1.4;
+    padding: 5px 9px;
+    border-radius: 8px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .card .body { padding: 10px 12px 12px; }
+  .card .label {
+    font-weight: 600; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .card .badge {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 8px; border-radius: 999px;
+    color: var(--muted); border: 1px solid var(--line);
+  }
+  .card.approved .badge { color: var(--green); border-color: var(--green); }
+  .card.rejected .badge { color: var(--red);   border-color: var(--red); }
+  .card.edit     .badge { color: var(--amber); border-color: var(--amber); }
+  .meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .meta strong { color: var(--text); font-weight: 600; }
+  .btn-row { display: flex; gap: 6px; margin: 6px 0; }
+  .btn-row button {
+    flex: 1; padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--line); background: transparent;
+    color: var(--text); cursor: pointer; font-weight: 600; font-size: 12px;
+  }
+  .btn-row button.approve.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-row button.reject.active  { background: var(--red);   border-color: var(--red);   color: #fff; }
+  .btn-row button.edit.active    { background: var(--amber); border-color: var(--amber); color: #1a1a1a; }
+  .btn-row button:hover { border-color: var(--text); }
+  .note {
+    width: 100%; min-height: 50px; resize: vertical;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 8px; font: inherit; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>UGC Reaction Hooks v4 — Clip Review</h1>
+  <div class="progress" id="progress">0 / 36 reviewed</div>
+  <button class="primary" id="copyBtn">Copy results</button>
+</header>
+<div id="root"></div>
+
+<script>
+// Hook copy assigned per clip — same mapping logic as v3 review
+const HOOKS = {
+  // ==== SNYDER ====
+  // S1 felt the difference (shock/awe)
+  "s4_01": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "s4_02": "I'm a 12 handicap and I felt the difference on the first shot.",
+  // S2 wish I knew (reflective/pondering)
+  "s4_04": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  "s4_05": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  "s4_06": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  // S3 blind test (confident/smug)
+  "s4_07": "Did a blind test with the three I play with every weekend. They all picked these!",
+  "s4_09": "Did a blind test with the three I play with every weekend. They all picked these!",
+  // S5 drives straight
+  "s4_13": "I can't believe how straight I'm hitting my drives now. My buddies hate it.",
+  "s4_14": "I can't believe how straight I'm hitting my drives now. My buddies hate it.",
+
+  // ==== GOLFBALLS ====
+  "g4_01": "Printed 'STILL OUTDRIVING DAVE' on a sleeve. He's so mad 😂",
+  "g4_03": "Printed 'STILL OUTDRIVING DAVE' on a sleeve. He's so mad 😂",
+  "g4_05": "She skipped the gift card. Got me 24 balls printed with 'WORLD'S HOTTEST GOLFER.' I've been showing them off all weekend.",
+  "g4_06": "She skipped the gift card. Got me 24 balls printed with 'WORLD'S HOTTEST GOLFER.' I've been showing them off all weekend.",
+  "g4_08": "Pulled out a sleeve on the first tee with my name on all the balls and the starter asked if I was a pro!",
+  "g4_09": "Pulled out a sleeve on the first tee with my name on all the balls and the starter asked if I was a pro!",
+  "g4_11": "Got my dad balls printed with the date he made his hole-in-one. He was so happy.",
+  "g4_14": "Can't believe the difference an alignment aid on my ball has made. Drive for show, putt for dough, as they say!!",
+  "g4_15": "Can't believe the difference an alignment aid on my ball has made. Drive for show, putt for dough, as they say!!",
+
+  // ==== v3 carry-overs ====
+  // Snyder v3 — distribute across S1/S2/S3
+  "v3_snyder_01": "Did a blind test with the three I play with every weekend. They all picked these!",
+  "v3_snyder_05": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "v3_snyder_06": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "v3_snyder_07": "Did a blind test with the three I play with every weekend. They all picked these!",
+  "v3_snyder_10": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  "v3_snyder_11": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "v3_snyder_12": "Did a blind test with the three I play with every weekend. They all picked these!",
+  "v3_snyder_13": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  "v3_snyder_16": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "v3_snyder_17": "Tour-grade balls without the $55-a-sleeve markup. Wish I knew about these years ago.",
+  "v3_snyder_19": "I'm a 12 handicap and I felt the difference on the first shot.",
+  "v3_snyder_21": "I'm a 12 handicap and I felt the difference on the first shot.",
+  // Golfballs v3
+  "v3_golfballs_01": "Printed 'STILL OUTDRIVING DAVE' on a sleeve. He's so mad 😂",
+  "v3_golfballs_02": "She skipped the gift card. Got me 24 balls printed with 'WORLD'S HOTTEST GOLFER.' I've been showing them off all weekend.",
+  "v3_golfballs_03": "Pulled out a sleeve on the first tee with my name on all the balls and the starter asked if I was a pro!",
+  "v3_golfballs_05": "Got my dad balls printed with the date he made his hole-in-one. He was so happy.",
+  "v3_golfballs_06": "Got my dad balls printed with the date he made his hole-in-one. He was so happy.",
+  "v3_golfballs_15": "She skipped the gift card. Got me 24 balls printed with 'WORLD'S HOTTEST GOLFER.' I've been showing them off all weekend.",
+};
+
+// HEAD_POS — same data used in the v3 review page, plus rough estimates
+// for the new v4 keyframes (head is centered ~20-25% from top in selfie shots).
+const HEAD_POS = {
+  // v3 (from sleepymana keyframe review)
+  "v3_snyder_01": 14.18, "v3_snyder_05": 28.79, "v3_snyder_06": 13.5,
+  "v3_snyder_07": 13.06, "v3_snyder_10": 16.63, "v3_snyder_11": 16.59,
+  "v3_snyder_12": 17.4,  "v3_snyder_13": 12.3,  "v3_snyder_16": 13.62,
+  "v3_snyder_17": 11.23, "v3_snyder_19": 9.38,  "v3_snyder_21": 15.39,
+  "v3_golfballs_01": 14.8, "v3_golfballs_02": 9.0, "v3_golfballs_03": 7.5,
+  "v3_golfballs_05": 14.88, "v3_golfballs_06": 9.4, "v3_golfballs_15": 15.6,
+  // v4 (estimates — selfie framing tends to put head 8-20% from top)
+  "s4_01": 18, "s4_02": 12, "s4_04": 14, "s4_05": 16, "s4_06": 18,
+  "s4_07": 14, "s4_09": 14, "s4_13": 16, "s4_14": 8,
+  "g4_01": 16, "g4_03": 12, "g4_05": 24, "g4_06": 14, "g4_08": 16,
+  "g4_09": 14, "g4_11": 12, "g4_14": 18, "g4_15": 14,
+};
+
+// Bubble bottom 6% above head top, clamp head min to 22% to keep room from frame top.
+function bubbleBottomPct(id) {
+  const head = Math.max(HEAD_POS[id] ?? 18, 22);
+  return (106 - head).toFixed(1);
+}
+
+const ROWS = [
+  // Snyder v4 NEW
+  {brand:"snyder",       id:"s4_01"}, {brand:"snyder",       id:"s4_02"},
+  {brand:"snyder",       id:"s4_04"}, {brand:"snyder",       id:"s4_05"},
+  {brand:"snyder",       id:"s4_06"}, {brand:"snyder",       id:"s4_07"},
+  {brand:"snyder",       id:"s4_09"}, {brand:"snyder",       id:"s4_13"},
+  {brand:"snyder",       id:"s4_14"},
+  // Golfballs v4 NEW
+  {brand:"golfballs",    id:"g4_01"}, {brand:"golfballs",    id:"g4_03"},
+  {brand:"golfballs",    id:"g4_05"}, {brand:"golfballs",    id:"g4_06"},
+  {brand:"golfballs",    id:"g4_08"}, {brand:"golfballs",    id:"g4_09"},
+  {brand:"golfballs",    id:"g4_11"}, {brand:"golfballs",    id:"g4_14"},
+  {brand:"golfballs",    id:"g4_15"},
+  // Snyder v3 carry-over
+  {brand:"v3_snyder",    id:"v3_snyder_01"}, {brand:"v3_snyder",    id:"v3_snyder_05"},
+  {brand:"v3_snyder",    id:"v3_snyder_06"}, {brand:"v3_snyder",    id:"v3_snyder_07"},
+  {brand:"v3_snyder",    id:"v3_snyder_10"}, {brand:"v3_snyder",    id:"v3_snyder_11"},
+  {brand:"v3_snyder",    id:"v3_snyder_12"}, {brand:"v3_snyder",    id:"v3_snyder_13"},
+  {brand:"v3_snyder",    id:"v3_snyder_16"}, {brand:"v3_snyder",    id:"v3_snyder_17"},
+  {brand:"v3_snyder",    id:"v3_snyder_19"}, {brand:"v3_snyder",    id:"v3_snyder_21"},
+  // Golfballs v3 carry-over
+  {brand:"v3_golfballs", id:"v3_golfballs_01"}, {brand:"v3_golfballs", id:"v3_golfballs_02"},
+  {brand:"v3_golfballs", id:"v3_golfballs_03"}, {brand:"v3_golfballs", id:"v3_golfballs_05"},
+  {brand:"v3_golfballs", id:"v3_golfballs_06"}, {brand:"v3_golfballs", id:"v3_golfballs_15"},
+];
+
+const BRANDS = [
+  {key:"snyder",       label:"Snyder — v4 NEW"},
+  {key:"golfballs",    label:"Golfballs — v4 NEW"},
+  {key:"v3_snyder",    label:"Snyder — v3 carry-over"},
+  {key:"v3_golfballs", label:"Golfballs — v3 carry-over"},
+];
+
+const root = document.getElementById("root");
+const state = {};
+
+for (const b of BRANDS) {
+  const list = ROWS.filter(r => r.brand === b.key);
+  const section = document.createElement("div");
+  section.className = "brand-section";
+  section.textContent = `${b.label} · ${list.length} clips`;
+  root.appendChild(section);
+
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  root.appendChild(grid);
+
+  for (const r of list) {
+    state[r.id] = { decision: null, note: "" };
+    const card = document.createElement("div");
+    card.className = "card";
+    card.id = `card_${r.id}`;
+    card.innerHTML = `
+      <div class="vidwrap">
+        <video src="videos/${r.id}.mp4" controls preload="metadata" playsinline></video>
+        <div class="text-overlay" style="bottom: ${bubbleBottomPct(r.id)}%"><span>${HOOKS[r.id] || ""}</span></div>
+      </div>
+      <div class="body">
+        <div class="label">
+          <span>${r.id.toUpperCase()}</span>
+          <span class="badge" id="badge_${r.id}">Pending</span>
+        </div>
+        <div class="btn-row">
+          <button class="approve" data-id="${r.id}" data-decision="approve">Approve</button>
+          <button class="edit"    data-id="${r.id}" data-decision="edit">Edit</button>
+          <button class="reject"  data-id="${r.id}" data-decision="reject">Reject</button>
+        </div>
+        <textarea class="note" placeholder="Notes" data-id="${r.id}"></textarea>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+const TOTAL = Object.keys(state).length;
+
+function updateUI(id) {
+  const card = document.getElementById(`card_${id}`);
+  const badge = document.getElementById(`badge_${id}`);
+  const { decision } = state[id];
+  card.classList.remove("approved", "rejected", "edit");
+  if (decision === "approve") { card.classList.add("approved"); badge.textContent = "Approved"; }
+  else if (decision === "reject") { card.classList.add("rejected"); badge.textContent = "Rejected"; }
+  else if (decision === "edit") { card.classList.add("edit"); badge.textContent = "Edit needed"; }
+  else { badge.textContent = "Pending"; }
+  for (const b of card.querySelectorAll(".btn-row button")) {
+    b.classList.toggle("active", b.dataset.decision === decision);
+  }
+  const reviewed = Object.values(state).filter(s => s.decision).length;
+  document.getElementById("progress").textContent = `${reviewed} / ${TOTAL} reviewed`;
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("button.approve, button.reject, button.edit");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const d = btn.dataset.decision;
+  state[id].decision = state[id].decision === d ? null : d;
+  updateUI(id);
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.matches("textarea.note")) state[e.target.dataset.id].note = e.target.value.trim();
+});
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const lines = ["UGC Reaction Hooks v4 — Clip Review", ""];
+  for (const b of BRANDS) {
+    lines.push(`## ${b.label}`);
+    const list = ROWS.filter(r => r.brand === b.key);
+    for (const r of list) {
+      const s = state[r.id];
+      const dec = s.decision ? s.decision.toUpperCase() : "—";
+      const note = s.note ? ` — ${s.note}` : "";
+      lines.push(`- ${r.id}: ${dec}${note}`);
+    }
+    lines.push("");
+  }
+  const out = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(out);
+    const btn = document.getElementById("copyBtn");
+    const orig = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = orig, 1200);
+  } catch {
+    alert(out);
+  }
+});
+</script>
+</body>
+</html>
