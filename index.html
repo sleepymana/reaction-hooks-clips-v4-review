@@ -201,10 +201,18 @@ const EXTRA_DROP = {
   "v3_golfballs_15": 10,
 };
 
-// Bubble bottom 6% above head top, clamp head min to 22% to keep room from frame top.
+// Place caption at CHEST level (below the face), not above the head.
+// Reasoning per Andrew: text in the top ~14% gets cropped by IG/Reels
+// safe zones and Stories UI. With face typically at 12-25% from top,
+// the only way to keep eyes uncovered AND clear the top safe zone is
+// to drop text below the chin (chest area, roughly 40-60% from top).
 function bubbleBottomPct(id) {
-  const head = Math.max(HEAD_POS[id] ?? 18, 22) + (EXTRA_DROP[id] ?? 0);
-  return (106 - head).toFixed(1);
+  const head = Math.max(HEAD_POS[id] ?? 18, 12);
+  const drop = EXTRA_DROP[id] ?? 0;
+  // Bubble bottom edge sits roughly chin + 8% (chest level).
+  // chin ≈ head_top + 22, so bubble_bottom_pct = 100 - (head_top + 30) = 70 - head_top
+  const pct = 70 - head - drop;
+  return Math.max(20, Math.min(70, pct)).toFixed(1);
 }
 
 const ROWS = [
